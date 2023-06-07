@@ -76,13 +76,65 @@ class xrplAccountTxTransactions(Script):
 
 
     ### Make a function to get the transactions
-    def xrplGetData(self,JSON_RPC_URL,rAddress):
+    def xrplGetData(self,JSON_RPC_URL,rAddress,get_full_history, input_name, ew):
         client = JsonRpcClient(JSON_RPC_URL)
         acct=rAddress
-        ledger_index_min=-1
-        acct_transactions_request=xrpl.models.requests.AccountTx(account=acct, ledger_index_min=ledger_index_min)
-        processing_1=client.request(acct_transactions_request).result["transactions"]
-        return processing_1
+
+        # If select get full account history, loop through and get the whole account history
+        if get_full_history=="1":
+            logger.info("get_full_history is set to 1")
+            
+            ledger_index_min=-1
+            acct_transactions_request=xrpl.models.requests.AccountTx(account=acct, ledger_index_min=ledger_index_min, forward=True, limit=10)
+            ledger_data=client.request(acct_transactions_request).result
+
+            # First write the first set to Splunk
+            result = ledger_data["transactions"]
+            logger.info(result)
+            for i in result:
+                #logger.info(i)
+                event = Event()
+                event.stanza = input_name
+                event.data = json.dumps(i)
+                #logger.info(event)
+                ew.write_event(event)
+                logger.info(event)
+
+            # Second repeat the call and write to Splunk if Marker is there
+            while True:
+                if "marker" not in ledger_data:
+                    break
+                ledger_marker = xrpl.models.requests.AccountTx(account=acct, ledger_index_min=ledger_index_min, limit=10, forward=True, marker=ledger_data["marker"])
+                ledger_data = client.request(ledger_marker).result
+                result = ledger_data["transactions"]
+                #logger.info(result)
+                for i in result:
+                    event = Event()
+                    event.stanza = input_name
+                    event.data = json.dumps(i)
+                    ew.write_event(event)
+        
+        # Else just get the most recent 10 transactions and start from there
+        else:
+            logger.info("get_full_history is not set to 1, just get 10 recent transactions and monitor from now on")
+            ledger_index_min=-1
+            acct_transactions_request=xrpl.models.requests.AccountTx(account=acct, ledger_index_min=ledger_index_min, forward=False, limit=10)
+            ledger_data=client.request(acct_transactions_request).result
+
+            result = ledger_data["transactions"]
+            logger.info(result)
+            for i in result:
+                #logger.info(i)
+                event = Event()
+                event.stanza = input_name
+                event.data = json.dumps(i)
+                #logger.info(event)
+                ew.write_event(event)
+                logger.info(event)
+
+
+
+        pass
 
 
     def stream_events(self, inputs, ew):
@@ -93,16 +145,9 @@ class xrplAccountTxTransactions(Script):
             rAddress = input_item["rAddress"]
             get_full_history = input_item["get_full_history"]
             logger.info(get_full_history)
+            logger.info(type(get_full_history))
 
-            result = self.xrplGetData(JSON_RPC_URL,rAddress)
-            print(result)
-            for i in result:
-                event = Event()
-                event.stanza = input_name
-                event.data = json.dumps(i)
-                ew.write_event(event)
-
-
+            result = self.xrplGetData(JSON_RPC_URL,rAddress,get_full_history, input_name, ew)
         
         pass
 

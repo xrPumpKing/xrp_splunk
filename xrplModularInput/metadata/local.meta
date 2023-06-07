@@ -11,3 +11,23 @@ access = read : [ * ], write : [ admin, power ]
 export = system
 version = 9.0.5
 modtime = 1685907940.416723000
+
+[inputs/xrplAccountTxTransactions%3A%2F%2Faddress5]
+owner = admin
+version = 9.0.5
+modtime = 1686165156.205245000
+
+[inputs/xrplAccountTxTransactions%3A%2F%2Faddress6]
+owner = admin
+version = 9.0.5
+modtime = 1686165779.660476000
+
+[inputs/xrplAccountTxTransactions%3A%2F%2Fadd7]
+owner = admin
+version = 9.0.5
+modtime = 1686166259.584473000
+
+[inputs/xrplAccountTxTransactions%3A%2F%2Faddress7]
+owner = admin
+version = 9.0.5
+modtime = 1686166344.513069000
