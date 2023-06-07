@@ -21,7 +21,10 @@ def setup_logging():
     return logger
 logger = setup_logging()
 logger.info("hello world!")
-
+SPLUNK_HOME = os.environ['SPLUNK_HOME']
+logger.info(SPLUNK_HOME)
+SPLUNK_DB = os.environ['SPLUNK_DB']
+logger.info(SPLUNK_DB)
 ###
 
 
@@ -85,8 +88,12 @@ class xrplAccountTxTransactions(Script):
             logger.info("get_full_history is set to 1")
             
             ledger_index_min=-1
-            acct_transactions_request=xrpl.models.requests.AccountTx(account=acct, ledger_index_min=ledger_index_min, forward=True, limit=10)
+            acct_transactions_request=xrpl.models.requests.AccountTx(account=acct, ledger_index_min=ledger_index_min, forward=True, limit=1)
             ledger_data=client.request(acct_transactions_request).result
+
+
+            # Create checkpoint file
+
 
             # First write the first set to Splunk
             result = ledger_data["transactions"]
@@ -114,12 +121,21 @@ class xrplAccountTxTransactions(Script):
                     event.data = json.dumps(i)
                     ew.write_event(event)
         
-        # Else just get the most recent 10 transactions and start from there
+        # Else just get the most recent transaction and start from there
         else:
+            logger.info(SPLUNK_HOME)
             logger.info("get_full_history is not set to 1, just get 10 recent transactions and monitor from now on")
             ledger_index_min=-1
-            acct_transactions_request=xrpl.models.requests.AccountTx(account=acct, ledger_index_min=ledger_index_min, forward=False, limit=10)
+            acct_transactions_request=xrpl.models.requests.AccountTx(account=acct, ledger_index_min=ledger_index_min, forward=False, limit=1)
             ledger_data=client.request(acct_transactions_request).result
+
+
+            # Create checkpoint file
+            logger.info(ledger_data["transactions"][0]["tx"]["ledger_index"])
+            f = open(os.path.join(SPLUNK_DB,'modinputs',input_name.replace('://',"_")), "a")
+            f.write(str(ledger_data["transactions"][0]["tx"]["ledger_index"]))
+            f.write("\n")
+            f.close()
 
             result = ledger_data["transactions"]
             logger.info(result)
@@ -146,6 +162,18 @@ class xrplAccountTxTransactions(Script):
             get_full_history = input_item["get_full_history"]
             logger.info(get_full_history)
             logger.info(type(get_full_history))
+
+            # First check if the checkpoint file exists, if so run the function to carry on from where it left off
+            from os.path import exists
+            file_exists = exists(os.path.join(SPLUNK_DB,'modinputs',input_name.replace('://',"_")))
+            logger.info(os.path.join(SPLUNK_DB,'modinputs',input_name.replace('://',"_")))
+            logger.info(file_exists)
+
+            if file_exists=="True":
+                logger.info("File exists")
+
+            else:
+                logger.info("File does not exist, this is the first input")
 
             result = self.xrplGetData(JSON_RPC_URL,rAddress,get_full_history, input_name, ew)
         
