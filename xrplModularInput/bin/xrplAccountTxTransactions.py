@@ -93,7 +93,11 @@ class xrplAccountTxTransactions(Script):
 
 
             # Create checkpoint file
-
+            logger.info(ledger_data["transactions"][0]["tx"]["ledger_index"])
+            f = open(os.path.join(SPLUNK_DB,'modinputs',input_name.replace('://',"_")), "a")
+            f.write(str(ledger_data["transactions"][0]["tx"]["ledger_index"]))
+            f.write("\n")
+            f.close()
 
             # First write the first set to Splunk
             result = ledger_data["transactions"]
@@ -153,6 +157,67 @@ class xrplAccountTxTransactions(Script):
         pass
 
 
+
+
+
+    def get_updates_only(self,JSON_RPC_URL,rAddress,get_full_history, input_name, ew):
+        
+        # Read the latest checkpoint into a variable
+        logger.info("TESTq")
+        logger.info(os.path.join(SPLUNK_DB,'modinputs',input_name.replace('://',"_")))
+        g = open(os.path.join(SPLUNK_DB,'modinputs',input_name.replace('://',"_")), 'r')
+        logger.info("TEST")
+        lines = g.read().splitlines()
+        last_line = lines[-1]
+        logger.info("LAST LINE: ")
+        logger.info(last_line)
+
+        # Get latest transactions since the latest checkmark 1 tx first -> get the latest checkmark from the latest tx -> update the checkmark file -> get remaining transactions using marker
+        client = JsonRpcClient(JSON_RPC_URL)
+        acct=rAddress
+        ledger_index_min = last_line
+        acct_transactions_request=xrpl.models.requests.AccountTx(account=acct, ledger_index_min=ledger_index_min, forward=False, limit=1)
+        ledger_data=client.request(acct_transactions_request).result
+        logger.info(ledger_data)
+
+        # Create checkpoint file
+        logger.info(ledger_data["transactions"][0]["tx"]["ledger_index"])
+        f = open(os.path.join(SPLUNK_DB,'modinputs',input_name.replace('://',"_")), "a")
+        f.write(str(ledger_data["transactions"][0]["tx"]["ledger_index"]))
+        f.write("\n")
+        f.close()
+
+        if str(ledger_data["transactions"][0]["tx"]["ledger_index"])==last_line:
+            logger.info("ITS THE SAME LINE")
+            return
+
+        result = ledger_data["transactions"]
+        logger.info(result)
+        for i in result:
+            #logger.info(i)
+            event = Event()
+            event.stanza = input_name
+            event.data = json.dumps(i)
+            ew.write_event(event)
+            logger.info(event)
+
+        while True:
+            logger.inf("HERE")
+            if "marker" not in ledger_data:
+                break
+            ledger_marker = xrpl.models.requests.AccountTx(account=acct, ledger_index_min=ledger_index_min, limit=10, forward=True, marker=ledger_data["marker"])
+            ledger_data = client.request(ledger_marker).result
+            result = ledger_data["transactions"]
+            #logger.info(result)
+            for i in result:
+                event = Event()
+                event.stanza = input_name
+                event.data = json.dumps(i)
+                ew.write_event(event)
+
+        
+        pass
+
     def stream_events(self, inputs, ew):
         # Splunk Enterprise calls the modular input, streams XML describing the inputs to stdin and waits for XML on stfout describing events
 
@@ -169,13 +234,17 @@ class xrplAccountTxTransactions(Script):
             logger.info(os.path.join(SPLUNK_DB,'modinputs',input_name.replace('://',"_")))
             logger.info(file_exists)
 
-            if file_exists=="True":
-                logger.info("File exists")
+            # If file checkpoint exists need to take that as input for the get transactions function
+            if file_exists:
+                logger.info("File exists get only the updates")
+                
+                result = self.get_updates_only(JSON_RPC_URL,rAddress,get_full_history, input_name, ew)
 
+            # If the file does not exist need to run the initial transactions gathering
             else:
                 logger.info("File does not exist, this is the first input")
+                result = self.xrplGetData(JSON_RPC_URL,rAddress,get_full_history, input_name, ew)
 
-            result = self.xrplGetData(JSON_RPC_URL,rAddress,get_full_history, input_name, ew)
         
         pass
 
