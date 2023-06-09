@@ -1,0 +1,4 @@
+tx.Account,Name,Description,Owned,<additional_field_1>
+rBXV9a9ApwNvB9uwYEqY9xXbPq2va4YJCC,EMEA_Central_Banking,Address used for central banking transactions EMEA,False,
+rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe,TEST_FAUCET,Faucet address on testnet,False,
+rDUFUHmUtsJunvNa2gW2fPmFsV9U8LLeqC,ACME_Main_Wallet_Address,This address is primary address for send/receive XRP,True,

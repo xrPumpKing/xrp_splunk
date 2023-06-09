@@ -1,0 +1,194 @@
+<form version="1.1" theme="dark">
+  <label>XRP Transaction Monitoring (Classic)</label>
+  <description>XRP Transaction Monitoring</description>
+  <fieldset submitButton="false">
+    <input type="time" token="field1">
+      <label></label>
+      <default>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <single>
+        <title>Total Transaction Volume</title>
+        <search>
+          <query>index=address8 | timechart count span=1d</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+          <refresh>30s</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="colorBy">value</option>
+        <option name="colorMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">1</option>
+        <option name="useThousandSeparators">1</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Total Transaction Value (XRP)</title>
+        <search>
+          <query>index=address8 | timechart sum(tx.Amount) span=1d</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+          <refresh>30s</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="colorBy">trend</option>
+        <option name="colorMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">1</option>
+        <option name="useThousandSeparators">1</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Distinct Address Sources</title>
+        <search>
+          <query>index=address8
+| timechart dc(tx.Account)</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Distinct Address Destinations</title>
+        <search>
+          <query>index=address8
+| timechart dc(tx.Destination)</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>Transaction Volume vs Amount</title>
+        <search>
+          <query>index=address8 
+| stats values(tx.Amount) count(tx.hash) by tx.Account tx.Amount</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+        </search>
+        <option name="charting.axisTitleX.text">Transaction Value (XRP)</option>
+        <option name="charting.axisTitleY.text">Transaction Volume</option>
+        <option name="charting.chart">scatter</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="height">266</option>
+      </chart>
+    </panel>
+    <panel>
+      <table>
+        <title>Unknown Address Transactions</title>
+        <search>
+          <query>index=address8 NOT [| inputlookup known_addresses | rename tx.Account as tx.Destination | fields tx.Destination]
+| append [| search index=address8 NOT [| inputlookup known_addresses | fields tx.Account]]
+| lookup known_addresses tx.Account AS tx.Account OUTPUT Name AS tx.Account.Enriched  | lookup known_addresses tx.Account AS tx.Destination OUTPUT Name AS tx.Destination.Enriched
+| fillnull value="Not found" tx.Destination.Enriched
+| table _time tx.Account.Enriched tx.Destination.Enriched tx.Account tx.Destination tx.Amount
+| sort -tx.Amount</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <refresh>30s</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+        <format type="color" field="tx.Destination.Enriched">
+          <colorPalette type="map">{"Not found":#D41F1F}</colorPalette>
+        </format>
+        <format type="color" field="tx.Amount">
+          <colorPalette type="map"></colorPalette>
+        </format>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <title>Owned Addresses List</title>
+        <search>
+          <query>|inputlookup known_addresses
+| search Owned="True"
+| fields Name tx.Account Description</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+    <panel>
+      <table>
+        <title>Known Addresses List</title>
+        <search>
+          <query>|inputlookup known_addresses
+| fields Name tx.Account Description</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <title>Transactions</title>
+        <search>
+          <query>index=address8
+| lookup known_addresses tx.Account AS tx.Account OUTPUT Name AS tx.Account.Enriched
+| lookup known_addresses tx.Account AS tx.Destination OUTPUT Name AS tx.Destination.Enriched
+| table _time tx.Account tx.Account.Enriched tx.Destination tx.Destination.Enriched tx.Amount 
+| sort -_time</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <refresh>30s</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="drilldown">row</option>
+        <option name="percentagesRow">false</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="totalsRow">true</option>
+      </table>
+    </panel>
+  </row>
+</form>

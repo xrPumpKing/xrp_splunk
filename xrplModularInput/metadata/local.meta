@@ -35,7 +35,7 @@ modtime = 1686255702.653844000
 [inputs/xrplAccountTxTransactions%3A%2F%2Fadd8_1]
 owner = admin
 version = 9.0.5
-modtime = 1686255698.990488000
+modtime = 1686255990.861968000
 
 [inputs/xrplAccountTxTransactions%3A%2F%2Fadd9_1]
 owner = admin
@@ -46,3 +46,35 @@ modtime = 1686255697.626339000
 owner = admin
 version = 9.0.5
 modtime = 1686255696.164873000
+
+[views/xrp_transaction_monitoring]
+owner = admin
+version = 9.0.5
+modtime = 1686320612.106491000
+
+[views/xrp_transaction_monitoring_classic]
+owner = admin
+version = 9.0.5
+modtime = 1686334537.246280000
+
+[transforms/owned_addresses]
+access = read : [ * ], write : [ admin ]
+export = system
+owner = admin
+version = 9.0.5
+modtime = 1686324743.719716000
+
+[lookups/owned_addresses.csv]
+version = 9.0.5
+modtime = 1686325057.944909000
+
+[transforms/known_addresses]
+access = read : [ * ], write : [ admin ]
+export = system
+owner = admin
+version = 9.0.5
+modtime = 1686325224.816939000
+
+[lookups/known_addresses.csv]
+version = 9.0.5
+modtime = 1686329954.012881000
