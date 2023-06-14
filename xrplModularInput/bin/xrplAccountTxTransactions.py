@@ -157,66 +157,68 @@ class xrplAccountTxTransactions(Script):
         pass
 
 
-
-
-
     def get_updates_only(self,JSON_RPC_URL,rAddress,get_full_history, input_name, ew):
-        
+
         # Read the latest checkpoint into a variable
-        logger.info("TESTq")
-        logger.info(os.path.join(SPLUNK_DB,'modinputs',input_name.replace('://',"_")))
-        g = open(os.path.join(SPLUNK_DB,'modinputs',input_name.replace('://',"_")), 'r')
-        logger.info("TEST")
+        file_path = os.path.join(SPLUNK_DB,'modinputs',input_name.replace('://',"_"))
+        g = open(file_path, 'r')
         lines = g.read().splitlines()
         last_line = lines[-1]
-        logger.info("LAST LINE: ")
-        logger.info(last_line)
+        log_message="1.1. Latest checkpoint in file: "+str(file_path)+" is: "+str(last_line)
+        logger.info(log_message)
 
-        # Get latest transactions since the latest checkmark 1 tx first -> get the latest checkmark from the latest tx -> update the checkmark file -> get remaining transactions using marker
+        # Get the very latest leger
         client = JsonRpcClient(JSON_RPC_URL)
         acct=rAddress
         ledger_index_min = last_line
         acct_transactions_request=xrpl.models.requests.AccountTx(account=acct, ledger_index_min=ledger_index_min, forward=False, limit=1)
         ledger_data=client.request(acct_transactions_request).result
-        logger.info(ledger_data)
+        latest=ledger_data["transactions"][0]["tx"]["ledger_index"]
 
-        # Create checkpoint file
-        logger.info(ledger_data["transactions"][0]["tx"]["ledger_index"])
+        if str(ledger_data["transactions"][0]["tx"]["ledger_index"])==str(last_line):
+            logger.info("1.4 ITS THE SAME LINE end")
+            return
+
+        # Update the checkpoint file
         f = open(os.path.join(SPLUNK_DB,'modinputs',input_name.replace('://',"_")), "a")
-        f.write(str(ledger_data["transactions"][0]["tx"]["ledger_index"]))
+        f.write(str(latest))
         f.write("\n")
         f.close()
 
-        if str(ledger_data["transactions"][0]["tx"]["ledger_index"])==last_line:
-            logger.info("ITS THE SAME LINE")
-            return
+        # Loop through from start to end getting all transactions
+        ledger_marker = xrpl.models.requests.AccountTx(account=acct, ledger_index_min=ledger_index_min,ledger_index_max=latest, limit=1, forward=True)
+        ledger_data = client.request(ledger_marker).result
 
-        result = ledger_data["transactions"]
-        logger.info(result)
-        for i in result:
-            #logger.info(i)
-            event = Event()
-            event.stanza = input_name
-            event.data = json.dumps(i)
-            ew.write_event(event)
-            logger.info(event)
-
-        while True:
-            logger.inf("HERE")
-            if "marker" not in ledger_data:
-                break
-            ledger_marker = xrpl.models.requests.AccountTx(account=acct, ledger_index_min=ledger_index_min, limit=10, forward=True, marker=ledger_data["marker"])
-            ledger_data = client.request(ledger_marker).result
+        # Case when #tx<10
+        if "marker" not in ledger_data:
             result = ledger_data["transactions"]
-            #logger.info(result)
             for i in result:
                 event = Event()
                 event.stanza = input_name
                 event.data = json.dumps(i)
                 ew.write_event(event)
+                logger.info("1.5 WRITTEN LATEST EVEMT")
+                logger.info(i)
+            return
 
-        
+        while True:
+            if "marker" not in ledger_data:
+                break
+            ledger_marker = xrpl.models.requests.AccountTx(account=acct, ledger_index_min=ledger_index_min,ledger_index_max=latest, limit=10, forward=True, marker=ledger_data["marker"])
+            ledger_data = client.request(ledger_marker).result
+            result = ledger_data["transactions"]
+            for i in result:
+                event = Event()
+                event.stanza = input_name
+                event.data = json.dumps(i)
+                ew.write_event(event)
+                logger.info("1.5 WRITTEN LATEST EVEMT")
+                logger.info(i)
+
         pass
+
+
+
 
     def stream_events(self, inputs, ew):
         # Splunk Enterprise calls the modular input, streams XML describing the inputs to stdin and waits for XML on stfout describing events
@@ -225,24 +227,19 @@ class xrplAccountTxTransactions(Script):
             JSON_RPC_URL = input_item["JSON_RPC_URL"]
             rAddress = input_item["rAddress"]
             get_full_history = input_item["get_full_history"]
-            logger.info(get_full_history)
-            logger.info(type(get_full_history))
 
             # First check if the checkpoint file exists, if so run the function to carry on from where it left off
             from os.path import exists
             file_exists = exists(os.path.join(SPLUNK_DB,'modinputs',input_name.replace('://',"_")))
-            logger.info(os.path.join(SPLUNK_DB,'modinputs',input_name.replace('://',"_")))
-            logger.info(file_exists)
 
             # If file checkpoint exists need to take that as input for the get transactions function
             if file_exists:
-                logger.info("File exists get only the updates")
-                
+                logger.info("1. File exists get only the updates")
                 result = self.get_updates_only(JSON_RPC_URL,rAddress,get_full_history, input_name, ew)
 
             # If the file does not exist need to run the initial transactions gathering
             else:
-                logger.info("File does not exist, this is the first input")
+                logger.info("2. File does not exist, this is the first input")
                 result = self.xrplGetData(JSON_RPC_URL,rAddress,get_full_history, input_name, ew)
 
         
