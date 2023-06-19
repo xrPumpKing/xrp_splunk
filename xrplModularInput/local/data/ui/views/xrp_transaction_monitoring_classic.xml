@@ -1,5 +1,5 @@
 <form version="1.1" theme="dark">
-  <label>XRP Transaction Monitoring (Classic)</label>
+  <label>XRP Transaction Monitoring by Transaction Type (Classic)</label>
   <description>XRP Transaction Monitoring</description>
   <fieldset submitButton="false">
     <input type="time" token="field1">
@@ -12,10 +12,19 @@
   </fieldset>
   <row>
     <panel>
+      <html>
+          <h1>
+          <a href="https://xrpl.org/payment.html" target="_blank">Payment Transactions</a>
+        </h1>
+       </html>
+    </panel>
+  </row>
+  <row>
+    <panel>
       <single>
         <title>Total Transaction Volume</title>
         <search>
-          <query>index=address8 | timechart count span=1d</query>
+          <query>index=test-escrow-2 | timechart count span=1d</query>
           <earliest>$field1.earliest$</earliest>
           <latest>$field1.latest$</latest>
           <sampleRatio>1</sampleRatio>
@@ -45,7 +54,7 @@
       <single>
         <title>Total Transaction Value (XRP)</title>
         <search>
-          <query>index=address8 | timechart sum(tx.Amount) span=1d</query>
+          <query>index=test-escrow-2 | timechart sum(tx.Amount) span=1d</query>
           <earliest>$field1.earliest$</earliest>
           <latest>$field1.latest$</latest>
           <sampleRatio>1</sampleRatio>
@@ -75,24 +84,30 @@
       <single>
         <title>Distinct Address Sources</title>
         <search>
-          <query>index=address8
+          <query>index=test-escrow-2
 | timechart dc(tx.Account)</query>
           <earliest>$field1.earliest$</earliest>
           <latest>$field1.latest$</latest>
+          <refresh>30s</refresh>
+          <refreshType>delay</refreshType>
         </search>
         <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
       </single>
     </panel>
     <panel>
       <single>
         <title>Distinct Address Destinations</title>
         <search>
-          <query>index=address8
+          <query>index=test-escrow-2
 | timechart dc(tx.Destination)</query>
           <earliest>$field1.earliest$</earliest>
           <latest>$field1.latest$</latest>
+          <refresh>30s</refresh>
+          <refreshType>delay</refreshType>
         </search>
         <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
       </single>
     </panel>
   </row>
@@ -101,7 +116,7 @@
       <chart>
         <title>Transaction Volume vs Amount</title>
         <search>
-          <query>index=address8 
+          <query>index=test-escrow-2 
 | stats values(tx.Amount) count(tx.hash) by tx.Account tx.Amount</query>
           <earliest>$field1.earliest$</earliest>
           <latest>$field1.latest$</latest>
@@ -118,8 +133,8 @@
       <table>
         <title>Unknown Address Transactions</title>
         <search>
-          <query>index=address8 NOT [| inputlookup known_addresses | rename tx.Account as tx.Destination | fields tx.Destination]
-| append [| search index=address8 NOT [| inputlookup known_addresses | fields tx.Account]]
+          <query>index=test-escrow-2 NOT [| inputlookup known_addresses | rename tx.Account as tx.Destination | fields tx.Destination]
+| append [| search index=test-escrow-2 NOT [| inputlookup known_addresses | fields tx.Account]]
 | lookup known_addresses tx.Account AS tx.Account OUTPUT Name AS tx.Account.Enriched  | lookup known_addresses tx.Account AS tx.Destination OUTPUT Name AS tx.Destination.Enriched
 | fillnull value="Not found" tx.Destination.Enriched
 | table _time tx.Account.Enriched tx.Destination.Enriched tx.Account tx.Destination tx.Amount
@@ -174,7 +189,7 @@
       <table>
         <title>Transactions</title>
         <search>
-          <query>index=address8
+          <query>index=test-escrow-2
 | lookup known_addresses tx.Account AS tx.Account OUTPUT Name AS tx.Account.Enriched
 | lookup known_addresses tx.Account AS tx.Destination OUTPUT Name AS tx.Destination.Enriched
 | table _time tx.Account tx.Account.Enriched tx.Destination tx.Destination.Enriched tx.Amount 
@@ -189,6 +204,107 @@
         <option name="refresh.display">progressbar</option>
         <option name="totalsRow">true</option>
       </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <html>
+          <h1>
+          <a href="https://xrpl.org/payment.html">Escrow Transactions</a>
+        </h1>
+       </html>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <single>
+        <title>Total EscrowCreate Volume</title>
+        <search>
+          <query>index="test-escrow-2" "tx.TransactionType"=EscrowCreate
+| timechart count span=1d</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <refresh>30s</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Total EscrowCreate Value</title>
+        <search>
+          <query>index="test-escrow-2" "tx.TransactionType"=EscrowCreate
+| timechart sum(tx.Amount) span=1d</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <refresh>30s</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Total Successful EscrowFinish</title>
+        <search>
+          <query>index="test-escrow-2" "tx.TransactionType"=EscrowFinish meta.TransactionResult="tesSUCCESS"
+| timechart count span=1d</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <refresh>30s</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+    </panel>
+    <panel>
+      <chart>
+        <title>Time or Condition Escrow</title>
+        <search>
+          <query>index="test-escrow-2" "tx.TransactionType"=EscrowCreate meta.TransactionResult="tesSUCCESS"
+| eval escrow_type = case(isnotnull("tx.FinishAfter"),"time_based",isnotnull("tx.condition"),"condition_based",true(),0)
+| stats count by escrow_type</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="charting.drilldown">none</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>Time to Finish</title>
+        <search>
+          <query>``` Get the EscrowCreate, EscrowFinish, EscrowComplete transactions, with their tx.Sequence ```
+index="test-escrow-2" "tx.TransactionType"=EscrowCreate OR "tx.TransactionType"=EscrowFinish OR "tx.TransactionType"=EscrowComplete
+``` Group the transactions by Sequence, OfferSequence ```
+| eval SEQUENCE=coalesce('tx.OfferSequence','tx.Sequence')
+| eval CREATE_SUCCESS=case('tx.TransactionType'=="EscrowCreate" AND 'meta.TransactionResult'=="tesSUCCESS",_time, true(), null())
+| eval FINISH_SUCCESS=case('tx.TransactionType'=="EscrowFinish" AND 'meta.TransactionResult'=="tesSUCCESS",_time, true(), null())
+| table  tx.Account tx.Destination tx.TransactionType SEQUENCE CREATE_SUCCESS FINISH_SUCCESS CREATE_TIME tx.Sequence tx.OfferSequence meta.TransactionResult tx.Amount tx.hash validated _time tx.ledger_index
+| sort -SEQUENCE _time
+| where isnotnull(CREATE_SUCCESS) OR isnotnull(FINISH_SUCCESS)
+| stats values(tx.Account) AS Text values(tx.Destination) AS Destination values(CREATE_SUCCESS) AS CREATE_SUCCESS values(FINISH_SUCCESS) AS FINISH_SUCCESS values(tx.ledger_index) AS ledger_index values(_time) as _time BY SEQUENCE
+| eval complete_time=FINISH_SUCCESS-CREATE_SUCCESS
+| where isnotnull(complete_time)
+| sort -SEQUENCE _time
+| eval _time=strftime(FINISH_SUCCESS,"%m/%d/%y %H:%M:%S")
+| bin _time span=1d
+| stats avg(complete_time) by _time</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+        </search>
+        <option name="charting.axisY.scale">log</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
     </panel>
   </row>
 </form>

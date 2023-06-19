@@ -55,7 +55,7 @@ modtime = 1686320612.106491000
 [views/xrp_transaction_monitoring_classic]
 owner = admin
 version = 9.0.5
-modtime = 1686334537.246280000
+modtime = 1687212331.459897000
 
 [transforms/owned_addresses]
 access = read : [ * ], write : [ admin ]
