@@ -3,10 +3,3 @@ Welcome to xrp_splunk, this repo contains various apps/add-ons for Splunk for in
 
 test
 
-```mermaid
-graph TD;
-    A-->B;
-    A-->C;
-    B-->D;
-    C-->D;
-```
